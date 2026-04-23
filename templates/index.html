@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GuardianAI — AI Content Moderation System </title>
+<meta name="description" content="AI-powered offensive language detection using NLP and machine learning. Detect hate speech, offensive language, and clean content in real-time."/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<!-- Mobile menu toggle -->
+<button class="menu-toggle" onclick="toggleMenu()" aria-label="Toggle menu">☰</button>
+<div class="overlay" onclick="toggleMenu()"></div>
+
+<!-- ═══ SIDEBAR ═══════════════════════════════════════════ -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-name">Guardian<span>AI</span></div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Navigation</div>
+    <a class="nav-item active" data-page="analyze" onclick="showPage('analyze',this)" id="nav-analyze">
+      <span class="nav-icon">◈</span> Analyzer
+    </a>
+    <a class="nav-item" data-page="performance" onclick="showPage('performance',this)" id="nav-performance">
+      <span class="nav-icon">◎</span> Model Performance
+    </a>
+    <a class="nav-item" data-page="dashboard" onclick="showPage('dashboard',this)" id="nav-dashboard">
+      <span class="nav-icon">⊞</span> Dashboard
+    </a>
+    <a class="nav-item" data-page="dataset" onclick="showPage('dataset',this)" id="nav-dataset">
+      <span class="nav-icon">≡</span> Dataset Explorer
+    </a>
+    <a class="nav-item" data-page="history" onclick="showPage('history',this)" id="nav-history">
+      <span class="nav-icon">◷</span> History
+    </a>
+    <a class="nav-item" data-page="about" onclick="showPage('about',this)" id="nav-about">
+      <span class="nav-icon">◌</span> About
+    </a>
+  </div>
+
+  <div class="sidebar-stats">
+    <div class="nav-label">Dataset Info</div>
+    <div class="sidebar-stat">Total <span style="color:var(--blue)">{{ ds.total }}</span></div>
+    <div class="sidebar-stat">Hate Speech <span style="color:var(--red)">{{ ds.hate_count }}</span></div>
+    <div class="sidebar-stat">Offensive <span style="color:var(--amber)">{{ ds.offensive_count }}</span></div>
+    <div class="sidebar-stat">Neither <span style="color:var(--green)">{{ ds.neither_count }}</span></div>
+  </div>
+
+  <!-- <div class="sidebar-footer">
+    <div class="status-line"><span class="status-dot"></span> System Online</div>
+    <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);margin-top:6px;">
+      Davidson et al. ICWSM 2017
+    </div>
+  </div> -->
+</nav>
+
+<!-- ═══ MAIN ══════════════════════════════════════════════ -->
+<div class="main">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar-title">AI CONTENT MODERATION SYSTEM</div>
+    <div class="topbar-right">
+      <div class="pill pill-green">MODEL ACTIVE</div>
+      <div class="pill pill-blue">TF-IDF + LR</div>
+      <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted)" id="clock"></div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: ANALYZER ════════════════════════════════ -->
+  <div class="page active" id="page-analyze">
+    <div class="page-header">
+      <h1 class="page-title">Text <span>Analyzer</span></h1>
+      <p class="page-sub">Enter any text to detect hate speech, offensive language, or clean content</p>
+    </div>
+
+    <!-- Session stats -->
+    <div class="session-stats">
+      <div class="card card-sm">
+        <div class="card-label">📊 Analyzed</div>
+        <div class="card-value blue" id="s-total">0</div>
+        <div class="card-desc">this session</div>
+      </div>
+      <div class="card card-sm">
+        <div class="card-label">🔴 Hate Speech</div>
+        <div class="card-value red" id="s-hate">0</div>
+        <div class="card-desc">detected</div>
+      </div>
+      <div class="card card-sm">
+        <div class="card-label">🟡 Offensive</div>
+        <div class="card-value amber" id="s-offensive">0</div>
+        <div class="card-desc">detected</div>
+      </div>
+      <div class="card card-sm">
+        <div class="card-label">🟢 Clean</div>
+        <div class="card-value green" id="s-neither">0</div>
+        <div class="card-desc">detected</div>
+      </div>
+    </div>
+
+    <div class="analyzer-layout">
+      <!-- Input -->
+      <div class="input-area">
+        <div class="textarea-card">
+          <div class="textarea-header">
+            <div class="textarea-header-label">
+              <span class="cursor-blink"></span>
+              INPUT TEXT
+            </div>
+            <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted)">⌘+Enter to run</span>
+          </div>
+          <textarea id="input-text" maxlength="500"
+            placeholder="Type or paste text here to analyze...&#10;&#10;Examples:&#10;  › You're an absolute idiot, go screw yourself&#10;  › Had a great day at the park with family&#10;  › All those people should be removed from society"></textarea>
+          <div class="textarea-footer">
+            <div class="char-count"><span id="char-num">0</span> / 500</div>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <button class="btn-clear" onclick="clearInput()">Clear</button>
+              <button class="btn-analyze" id="analyze-btn" onclick="analyzeText()">
+                <div class="spinner" id="btn-spinner"></div>
+                <span id="btn-label">ANALYZE</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick test buttons -->
+        <div style="margin-top:16px;">
+          <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);letter-spacing:.15em;text-transform:uppercase;margin-bottom:10px;">Quick Test Samples</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            <button class="sample-btn" onclick="setSample('You absolute moron, nobody wants you here!')">🔴 Offensive</button>
+            <button class="sample-btn" onclick="setSample('Had a wonderful time at the concert tonight!')">🟢 Clean</button>
+            <button class="sample-btn" onclick="setSample('All those people should be eliminated from society!')">⛔ Hate Speech</button>
+            <button class="sample-btn" onclick="setSample('Just finished reading a fantastic book I highly recommend!')">✅ Neutral</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Result + History -->
+      <div class="result-area">
+        <div class="result-main" id="result-card">
+          <div class="result-verdict">
+            <div class="verdict-icon" id="v-icon"></div>
+            <div>
+              <div class="verdict-name" id="v-name"></div>
+              <div class="verdict-sub" id="v-sub"></div>
+            </div>
+          </div>
+          <div class="confidence-row">
+            <div class="conf-label">Confidence</div>
+            <div class="conf-val" id="v-conf"></div>
+          </div>
+          <div class="meter"><div class="meter-fill" id="meter-fill" style="width:0%"></div></div>
+          <div class="prob-grid">
+            <div class="prob-item">
+              <div class="prob-class">Hate</div>
+              <div class="prob-pct" id="p-hate" style="color:var(--red)">—</div>
+            </div>
+            <div class="prob-item">
+              <div class="prob-class">Offensive</div>
+              <div class="prob-pct" id="p-offensive" style="color:var(--amber)">—</div>
+            </div>
+            <div class="prob-item">
+              <div class="prob-class">Neither</div>
+              <div class="prob-pct" id="p-neither" style="color:var(--green)">—</div>
+            </div>
+          </div>
+          <div class="meta-row">
+            <div class="meta-item">
+              <div class="meta-label">Words</div>
+              <div class="meta-val" id="m-words">—</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">CAPS %</div>
+              <div class="meta-val" id="m-caps">—</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Time</div>
+              <div class="meta-val" id="m-time">—</div>
+            </div>
+          </div>
+          <div class="clean-text-box">
+            <div class="ct-label">Preprocessed Input</div>
+            <div class="ct-text" id="ct-text"></div>
+          </div>
+        </div>
+
+        <!-- History -->
+        <div class="history-card">
+          <div class="history-header">
+            <div class="history-title">Recent Analyses</div>
+            <div class="history-count" id="hist-count">0</div>
+          </div>
+          <div class="history-list" id="history-list">
+            <div class="history-empty">No analyses yet — try analyzing some text</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: PERFORMANCE ═════════════════════════════ -->
+  <div class="page" id="page-performance">
+    <div class="page-header">
+      <h1 class="page-title">Model <span>Performance</span></h1>
+      <p class="page-sub">Evaluation metrics on 20% held-out test set (Davidson et al. schema)</p>
+    </div>
+    <div id="perf-loading" style="text-align:center;padding:60px;font-family:var(--font-mono);font-size:13px;color:var(--text-muted);">
+      Loading metrics...
+    </div>
+    <div id="perf-content" style="display:none;">
+      <div class="grid-3" style="margin-bottom:24px;">
+        <div class="card metric-big">
+          <div class="val green" id="perf-acc">—</div>
+          <div class="lbl">Accuracy</div>
+        </div>
+        <div class="card metric-big">
+          <div class="val blue" id="perf-f1m">—</div>
+          <div class="lbl">F1 Macro</div>
+        </div>
+        <div class="card metric-big">
+          <div class="val amber" id="perf-f1w">—</div>
+          <div class="lbl">F1 Weighted</div>
+        </div>
+      </div>
+      <div class="perf-grid">
+        <div class="card">
+          <div class="card-label" style="margin-bottom:14px;">Confusion Matrix</div>
+          <div style="overflow-x:auto;">
+            <table class="cm-table" id="cm-table"></table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-label" style="margin-bottom:14px;">Per-Class Report</div>
+          <table class="report-table" id="report-table"></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: DASHBOARD ═══════════════════════════════ -->
+  <div class="page" id="page-dashboard">
+    <div class="page-header">
+      <h1 class="page-title">Analysis <span>Dashboard</span></h1>
+      <p class="page-sub">Full ML pipeline visualisation — generated during training</p>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <img src="/static/dashboard.png" style="width:100%;display:block;border-radius:var(--radius-lg);" alt="ML Dashboard">
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: DATASET ═════════════════════════════════ -->
+  <div class="page" id="page-dataset">
+    <div class="page-header">
+      <h1 class="page-title">Dataset <span>Explorer</span></h1>
+      <p class="page-sub">Browse 50 random samples from the Davidson et al. (ICWSM 2017) dataset</p>
+    </div>
+    <div class="grid-3" style="margin-bottom:24px;">
+      <div class="card card-sm">
+        <div class="card-label">Total Samples</div>
+        <div class="card-value blue">{{ ds.total }}</div>
+      </div>
+      <div class="card card-sm">
+        <div class="card-label">Avg Tweet Length</div>
+        <div class="card-value">{{ ds.avg_len }}</div>
+        <div class="card-desc">characters</div>
+      </div>
+      <div class="card card-sm">
+        <div class="card-label">Avg Word Count</div>
+        <div class="card-value">{{ ds.avg_words }}</div>
+        <div class="card-desc">words per tweet</div>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between;">
+        <div class="card-label" style="margin:0;">Sample Records</div>
+        <button onclick="loadDataset()" class="refresh-btn">↻ Refresh</button>
+      </div>
+      <div class="dataset-table-wrap">
+        <table class="dataset-table">
+          <thead><tr><th>#</th><th>Tweet</th><th>Class</th></tr></thead>
+          <tbody id="dataset-tbody"><tr><td colspan="3" style="text-align:center;padding:40px;color:var(--text-muted);">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: HISTORY ════════════════════════════════ -->
+  <div class="page" id="page-history">
+    <div class="page-header">
+      <h1 class="page-title">Analysis <span>History</span></h1>
+      <p class="page-sub">Browse all previously analyzed texts from this session (max 20 entries)</p>
+    </div>
+
+    <!-- Quick Analyze Bar -->
+    <div class="card quick-analyze-card" style="margin-bottom:24px;padding:0;overflow:hidden;">
+      <div style="padding:14px 20px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.01);">
+        <span class="cursor-blink" style="width:6px;height:14px;"></span>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);letter-spacing:.15em;text-transform:uppercase;">QUICK ANALYZE</span>
+      </div>
+      <div style="padding:16px 20px;display:flex;gap:12px;align-items:center;">
+        <input type="text" id="hp-input" maxlength="500"
+          placeholder="Type text here and hit Analyze..."
+          style="flex:1;background:var(--bg-base);border:1px solid var(--border-subtle);border-radius:var(--radius);
+          padding:12px 16px;color:var(--text-primary);font-family:var(--font-mono);font-size:13px;outline:none;
+          transition:var(--transition);"
+          onkeydown="if(event.key==='Enter')historyQuickAnalyze()"
+          onfocus="this.style.borderColor='var(--accent)';this.style.boxShadow='0 0 0 3px var(--accent-dim)'"
+          onblur="this.style.borderColor='var(--border-subtle)';this.style.boxShadow='none'"
+        >
+        <button class="btn-analyze" onclick="historyQuickAnalyze()" id="hp-analyze-btn" style="padding:12px 24px;">
+          <div class="spinner" id="hp-btn-spinner"></div>
+          <span id="hp-btn-label">ANALYZE</span>
+        </button>
+      </div>
+      <!-- Flash result strip -->
+      <div id="hp-flash-result" style="display:none;padding:14px 20px;border-top:1px solid var(--border-subtle);
+        display:none;align-items:center;gap:14px;animation:resultIn .3s ease;">
+        <span id="hp-flash-icon" style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;
+          justify-content:center;font-size:16px;font-weight:bold;font-family:var(--font-mono);flex-shrink:0;"></span>
+        <div style="flex:1;min-width:0;">
+          <div id="hp-flash-label" style="font-size:16px;font-weight:700;line-height:1;"></div>
+          <div id="hp-flash-meta" style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-top:4px;"></div>
+        </div>
+        <div id="hp-flash-conf" style="font-family:var(--font-mono);font-size:22px;font-weight:800;flex-shrink:0;"></div>
+      </div>
+    </div>
+
+    <!-- Session summary cards -->
+    <div class="grid-4" style="margin-bottom:24px;" id="history-summary-cards">
+      <div class="card card-sm">
+        <div class="card-label">📊 Total Analyzed</div>
+        <div class="card-value blue" id="hp-total">0</div>
+        <div class="card-desc">this session</div>
+      </div>
+      <div class="card card-sm">
+        <div class="card-label">🔴 Hate Speech</div>
+        <div class="card-value red" id="hp-hate">0</div>
+        <div class="card-desc">detected</div>
+      </div>
+      <div class="card card-sm">
+        <div class="card-label">🟡 Offensive</div>
+        <div class="card-value amber" id="hp-offensive">0</div>
+        <div class="card-desc">detected</div>
+      </div>
+      <div class="card card-sm">
+        <div class="card-label">🟢 Clean</div>
+        <div class="card-value green" id="hp-neither">0</div>
+        <div class="card-desc">detected</div>
+      </div>
+    </div>
+
+    <!-- History table -->
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div class="card-label" style="margin:0;">Analysis Records</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="history-filter-group">
+            <button class="filter-btn active" data-filter="all" onclick="filterHistory('all',this)">All</button>
+            <button class="filter-btn" data-filter="hate" onclick="filterHistory('hate',this)">Hate</button>
+            <button class="filter-btn" data-filter="offensive" onclick="filterHistory('offensive',this)">Offensive</button>
+            <button class="filter-btn" data-filter="clean" onclick="filterHistory('clean',this)">Clean</button>
+          </div>
+          <button onclick="loadHistoryPage()" class="refresh-btn">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="dataset-table-wrap" style="max-height:520px;overflow-y:auto;">
+        <table class="dataset-table" id="history-page-table">
+          <thead><tr><th>#</th><th>Text</th><th>Classification</th><th>Confidence</th><th>Words</th><th>CAPS %</th><th>Time</th></tr></thead>
+          <tbody id="history-page-tbody">
+            <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">No analyses yet — go to the Analyzer to get started</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: ABOUT ═══════════════════════════════════ -->
+  <div class="page" id="page-about">
+    <div class="page-header">
+      <h1 class="page-title">About <span>Project</span></h1>
+      <p class="page-sub">AI Content Moderation System</p>
+    </div>
+    <div class="grid-2" style="gap:24px;">
+      <div class="card">
+        <div class="card-label" style="margin-bottom:14px;">📋 Project Overview</div>
+        <p style="font-size:14px;color:var(--text-secondary);line-height:1.9;">
+          This system detects hate speech, offensive language, and clean content in social media text
+          using classical NLP techniques. The pipeline covers data preprocessing, TF-IDF feature
+          extraction, multi-class classification, and a full evaluation suite.
+        </p>
+      </div>
+      <div class="card">
+        <div class="card-label" style="margin-bottom:14px;">🛠 Tech Stack</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          {% for tech in ['Python 3.12','Flask 3.1','Scikit-learn','TF-IDF','Logistic Regression','Linear SVM','Pandas','NumPy','Matplotlib','Seaborn'] %}
+          <span class="tech-tag">{{ tech }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label" style="margin-bottom:14px;">📊 Dataset</div>
+        <div style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);line-height:2.4;">
+          <div>Reference: Davidson et al. (ICWSM 2017)</div>
+          <div>Schema: count, hate_speech, offensive_language, neither, class, tweet</div>
+          <div>Classes: <span style="color:var(--red)">0 = Hate Speech</span> · <span style="color:var(--amber)">1 = Offensive</span> · <span style="color:var(--green)">2 = Neither</span></div>
+          <div>Size: <span style="color:var(--blue)">{{ ds.total }} samples</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label" style="margin-bottom:14px;">⚙️ ML Pipeline</div>
+        <div style="font-size:13px;color:var(--text-secondary);line-height:2.2;">
+          <div>① Data Loading & EDA</div>
+          <div>② Text Preprocessing (regex, stopwords)</div>
+          <div>③ TF-IDF Vectorization (bigrams, 20K features)</div>
+          <div>④ Model Training (LR, SVM, RF, NB)</div>
+          <div>⑤ Evaluation (Accuracy, F1, Confusion Matrix)</div>
+          <div>⑥ Visualization Dashboard</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
